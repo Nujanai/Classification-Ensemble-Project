@@ -1,6 +1,7 @@
 # Classification-Ensemble-Project
 Ian Lynch
 TBANLT 560 – Winter
+
 Project Two
 
 In this Github repository you will find all the related documents for the Ensemble Classification experiment I ran. I used the breast cancer dataset that is available with R Studio.
