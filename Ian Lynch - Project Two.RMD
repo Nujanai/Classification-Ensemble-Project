@@ -1,0 +1,209 @@
+---
+title: "Ian Lynch - Project Two"
+author: "Ian Lynch"
+date: "3/16/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#Set Seed
+set.seed(2)
+library(dplyr)
+require(mlbench)
+library(e1071)
+library(klaR)
+library(nnet)
+library(rpart)
+library(MASS)
+library(randomForest)
+library(expss)
+library(writexl)
+```
+
+
+```{r}
+#Prep Dataset
+data(BreastCancer)
+BreastCancer <- na.omit(BreastCancer) 
+BreastCancer$Id <- NULL 
+```
+
+
+```{r}
+#SVM tuning
+#library(e1071)
+mysvm <- svm(Class ~., BreastCancer)
+mysvm.pred <- predict(mysvm, BreastCancer)
+table(mysvm.pred, BreastCancer$Class)
+
+SVMPredict <- as.data.frame(mysvm.pred)
+colnames(SVMPredict) <- "SVM Tuning"
+#mysvm.pred  benign malignant
+#  benign       431         8
+#  malignant     13       231
+```
+
+
+```{r}
+#NaiveBayes
+#library(klaR)
+mynb <- NaiveBayes(Class ~., BreastCancer)
+mynb.pred <- predict(mynb,BreastCancer)
+table(mynb.pred$class,BreastCancer$Class)
+
+NBPredict <- as.data.frame(mynb.pred$class)
+colnames(NBPredict) <- "Naive Bayes"
+#            benign malignant
+#  benign       431         3
+#  malignant     13       236
+```
+
+
+```{r}
+#Neural Net
+#library(nnet)
+mynnet <- nnet(Class ~ ., BreastCancer, size=1)
+mynnet.pred <- predict(mynnet,BreastCancer,type="class")
+table(mynnet.pred,BreastCancer$Class)
+
+NNPredict <- as.data.frame(mynnet.pred)
+
+colnames(NNPredict) <- "Neural Net"
+#mynnet.pred benign malignant
+#  benign       438        10
+#  malignant      6       229
+```
+
+
+```{r}
+#Decision Tree
+#library(rpart)
+mytree <- rpart(Class ~ ., BreastCancer)
+plot(mytree); text(mytree)
+summary(mytree)
+mytree.pred <- predict(mytree,BreastCancer,type="class")
+
+DTPredict <- as.data.frame(mytree.pred)
+
+colnames(DTPredict) <- "Decision Tree"
+```
+
+
+```{r}
+#Quadratic Discriminant Analysis
+#library(MASS)
+BreastCancerqda <- lapply(BreastCancer,as.numeric)
+BreastCancerqda$Class <- factor(BreastCancerqda$Class, labels = c("benign", "malignant"))
+
+myqda <- qda(Class ~ ., BreastCancerqda)
+myqda.pred <- predict(myqda, BreastCancerqda)
+table(myqda.pred$class,BreastCancerqda$Class)
+
+QDAPredict <- as.data.frame(myqda.pred$class) 
+
+colnames(QDAPredict) <- "Quad Discrim Analysis"
+#            benign malignant
+#  benign       422         6
+#  malignant     22       233
+```
+
+
+```{r}
+#Regularised Discriminant Analysis
+#library(klaR)
+myrda <- rda(Class ~ ., BreastCancer)
+myrda.pred <- predict(myrda, BreastCancer)
+table(myrda.pred$class, BreastCancer$Class)
+       
+RDAPredict <- as.data.frame(myrda.pred$class)
+colnames(RDAPredict) <- "Reg Discrim Analysis"
+#            benign malignant
+#  benign       433         2
+#  malignant     11       237
+```
+
+
+```{r}
+#Regularised Discriminant Analysis
+#library(klaR)
+myrda <- rda(Class ~ ., BreastCancer)
+myrda.pred <- predict(myrda, BreastCancer)
+table(myrda.pred$class, BreastCancer$Class)
+       
+RDAPredict <- as.data.frame(myrda.pred$class)
+colnames(RDAPredict) <- "Reg Discrim Analysis"
+#            benign malignant
+#  benign       432         2
+#  malignant     12       237
+```
+
+
+```{r}
+#Random Forests
+#library(randomForest)
+myrf <- randomForest(Class ~ .,BreastCancer)
+myrf.pred <- predict(myrf, BreastCancer)
+table(myrf.pred, BreastCancer$Class)    
+
+RFPredict <- as.data.frame(myrf.pred)
+colnames(RFPredict) <- "Random Forests"
+#myrf.pred   benign malignant
+#  benign       444         0
+#  malignant      0       239
+```
+
+
+```{r}
+#Final Results
+#library(dplyr)
+#library(expss)
+
+Results <- as.data.frame(cbind(SVMPredict, NBPredict, NNPredict, DTPredict, QDAPredict,
+             RDAPredict,RFPredict))
+
+ActualResults <- dplyr::select(BreastCancer, Class)
+
+View(Results)
+View(ActualResults)
+
+MajorityPredict <- apply(Results,1,function(x) names(which.max(table(x))))
+
+PredictVsReal <- as.data.frame(cbind(ActualResults, MajorityPredict))
+View(PredictVsReal)
+
+Accuracy <- as.data.frame(ifelse (PredictVsReal$MajorityPredict == PredictVsReal$Class, 
+                                  "True", "False"))
+colnames(Accuracy) <- "Accuracy"
+```
+
+
+```{r}
+#Majority Selection Validation in Excel
+#library(writexl)
+write_xlsx(Results,"C:\\Users\\ianmc\\OneDrive\\Documents\\TBANLT 560\\Project Two\\Results.xlsx")
+
+MajorityDF <- as.data.frame(MajorityPredict)
+write_xlsx(MajorityDF,"C:\\Users\\ianmc\\OneDrive\\Documents\\TBANLT 560\\Project Two\\Majority.xlsx")
+```
+
+
+```{r}
+#Ensemble Accuracy
+PredictVsReal <- cbind(PredictVsReal, Accuracy)
+View(PredictVsReal)
+
+SumAccuracy <- sum(with(PredictVsReal, Accuracy ==  "True"))
+SumObservations <- nrow(PredictVsReal)
+EnsembleAccuarcy <- SumAccuracy/SumObservations
+EnsembleAccuarcy
+#0.9795022
+#Ensemble 97.95% Accuracy!
+```
+
+
+
